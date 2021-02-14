@@ -4,11 +4,17 @@ import (
 	"flag"
 	"fmt"
 	"os"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 )
 
 var bucketName string
 var accessKeyID string
 var secretAccessKey string
+var currentDirectoryContext string = "/"
 
 func init() {
 
@@ -39,6 +45,52 @@ func init() {
 
 }
 
+func handleLsCommand(svc *s3.S3) (int, bool) {
+	resp, err := svc.ListObjectsV2(&s3.ListObjectsV2Input{Bucket: aws.String(bucketName)})
+	if err != nil {
+		return 1, false
+	}
+	for _, item := range resp.Contents {
+		fmt.Println("Name:         ", *item.Key)
+		fmt.Println("Last modified:", *item.LastModified)
+		fmt.Println("Size:         ", *item.Size)
+		fmt.Println("Storage class:", *item.StorageClass)
+		fmt.Println("")
+	}
+	return 1, true
+}
+
 func main() {
 
+	var command string
+
+	awsSession, err := session.NewSession(&aws.Config{
+		Credentials: credentials.NewStaticCredentials(accessKeyID, secretAccessKey, ""),
+	})
+	if err != nil {
+		fmt.Println("Error creating aws session")
+		os.Exit(1)
+	}
+
+	s3Session := s3.New(awsSession)
+
+	for {
+
+		fmt.Print("gonix :> ")
+		fmt.Scanln(&command)
+
+		switch command {
+		case "exit":
+			os.Exit(0)
+		case "ls":
+			_, status := handleLsCommand(s3Session)
+			if status {
+				fmt.Println("Error Listing files in the current directory")
+			}
+		case "pwd":
+			fmt.Println(currentDirectoryContext)
+		default:
+			continue
+		}
+	}
 }
