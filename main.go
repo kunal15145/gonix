@@ -15,6 +15,7 @@ var bucketName string
 var accessKeyID string
 var secretAccessKey string
 var currentDirectoryContext string = "/"
+var s3Session *s3.S3
 
 func init() {
 
@@ -43,6 +44,16 @@ func init() {
 		accessKeyID = os.Getenv("AWS_ACCESS_KEY_ID")
 	}
 
+	awsSession, error := session.NewSession(&aws.Config{
+		Credentials: credentials.NewStaticCredentials(accessKeyID, secretAccessKey, ""),
+	})
+	if error != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", "Not able to create AWS Session.")
+		os.Exit(1)
+	}
+
+	s3Session = s3.New(awsSession)
+
 }
 
 func handleLsCommand(svc *s3.S3) (int, bool) {
@@ -63,16 +74,6 @@ func handleLsCommand(svc *s3.S3) (int, bool) {
 func main() {
 
 	var command string
-
-	awsSession, err := session.NewSession(&aws.Config{
-		Credentials: credentials.NewStaticCredentials(accessKeyID, secretAccessKey, ""),
-	})
-	if err != nil {
-		fmt.Println("Error creating aws session")
-		os.Exit(1)
-	}
-
-	s3Session := s3.New(awsSession)
 
 	for {
 
