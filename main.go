@@ -32,8 +32,8 @@ func init() {
 	}
 }
 
-func handleLsCommand() (int, bool) {
-	return awshelper.ListFiles(currentDirectoryContext)
+func handleLsCommand() ([]string, error) {
+	return awshelper.ListAllFiles(currentDirectoryContext)
 }
 
 func main() {
@@ -49,8 +49,8 @@ func main() {
 		case "exit":
 			os.Exit(0)
 		case "ls":
-			_, status := handleLsCommand()
-			if status {
+			_, err := handleLsCommand()
+			if err != nil {
 				fmt.Println("Error Listing files in the current directory")
 			}
 		case "pwd":

@@ -33,21 +33,46 @@ func InitializeSession(profileName string, awsRegion string, bucketName string) 
 	return nil
 }
 
-/*
-ListFiles -> returns files present in the current directory
-*/
-func ListFiles(currentPath string) (int, bool) {
-	resp, err := s3Session.ListObjectsV2(&s3.ListObjectsV2Input{Bucket: aws.String(s3BucketName)})
+func processListFiles(allFiles []string, continuationToken *string) ([]string, string, error) {
+	var options *s3.ListObjectsV2Input
+	if *continuationToken == "" {
+		options = &s3.ListObjectsV2Input{
+			Bucket: aws.String(s3BucketName),
+		}
+	} else {
+		options = &s3.ListObjectsV2Input{
+			Bucket:            aws.String(s3BucketName),
+			ContinuationToken: continuationToken,
+		}
+	}
+	resp, err := s3Session.ListObjectsV2(options)
 	if err != nil {
 		fmt.Println(err)
-		return 1, false
+		return []string{}, "", err
 	}
 	for _, item := range resp.Contents {
-		fmt.Println("Name:         ", *item.Key)
-		fmt.Println("Last modified:", *item.LastModified)
-		fmt.Println("Size:         ", *item.Size)
-		fmt.Println("Storage class:", *item.StorageClass)
-		fmt.Println("")
+		allFiles = append(allFiles, *item.Key)
 	}
-	return 1, true
+	return allFiles, *resp.NextContinuationToken, nil
+}
+
+/*
+ListAllFiles -> returns files present in the current directory
+*/
+func ListAllFiles(currentPath string) ([]string, error) {
+
+	var allFiles []string
+	var continuationToken string
+
+	allFiles, continuationToken, err := processListFiles(allFiles, &continuationToken)
+	if err != nil {
+		return []string{}, err
+	}
+	for continuationToken != "" {
+		allFiles, continuationToken, err = processListFiles(allFiles, &continuationToken)
+		if err != nil {
+			return []string{}, err
+		}
+	}
+	return allFiles, nil
 }
