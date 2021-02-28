@@ -32,7 +32,7 @@ func init() {
 	}
 }
 
-func handleLsCommand() ([]string, error) {
+func handleLsCommand() ([]awshelper.FileSystemObject, error) {
 	return awshelper.ListAllFiles(currentDirectoryContext)
 }
 
